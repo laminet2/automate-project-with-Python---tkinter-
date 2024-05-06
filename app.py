@@ -26,6 +26,7 @@ root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 temporisateur=0
 motAnalyser=""
 nextEtat=0
+positionx=10
 
 #--------- ACCEUILL ---------------------#
 ## MENU
@@ -100,13 +101,15 @@ def renitianiliser_saisie():
     #Il manque a renitialisez la fonction de traitement des mots
     #effacer et depackager la zone de dessein
     #effacer et depackager le sort du mot
-    global temporisateur,motAnalyser,nextEtat,sectionSortDuMot,sortDuMot
+    global temporisateur,motAnalyser,nextEtat,sectionSortDuMot,sortDuMot,positionx
     wordToAnalyse.delete(0, 'end')
     temporisateur=0
     motAnalyser=""
     nextEtat=0
+    positionx=10
     sectionSortDuMot.pack_forget()
     sortDuMot.pack_forget()
+    sectionDessein.delete("all")
     sectionDessein.pack_forget()
 
 #champ saisir mot
@@ -491,10 +494,12 @@ def windowsEditTable(root):
 #--------- ANALYSE DU MOT ----------
 #quand on renitialise mettre le temporisateur a 0
 def analyseMot(motEntrer):
-    global Automate,temporisateur,motAnalyser,nextEtat,sectionSortDuMot,sortDuMot,sectionDessein
+    global Automate,temporisateur,motAnalyser,nextEtat,sectionSortDuMot,sortDuMot,sectionDessein,positionx
     (Etat,alphabet,tt,initiaux,acceptant)=Automate
     lettreEnListe=[]
-    rayon=30
+    rayon=50
+    y=72
+    dist=50
     if(motEntrer==motAnalyser and motEntrer!=""):
         lettreEnListe=[k for k in motEntrer]
         #Dessein
@@ -510,6 +515,12 @@ def analyseMot(motEntrer):
             sortDuMot.pack()
                 
             return True
+        
+        sectionDessein.create_line(positionx,95,positionx+dist,95,arrow=LAST)
+        sectionDessein.create_oval(positionx+dist,y,positionx+dist+rayon,y+rayon)
+        if(nextEtat in acceptant):
+            sectionDessein.create_oval(positionx+dist+(5),y+(5),positionx+dist+(rayon-5),y+(rayon-5))
+        sectionDessein.create_text(dist+positionx+(rayon//2),95,text=f"{nextEtat}",font=("Lato",14,"bold"))
 
     elif(motEntrer!=""):
         #premiere analyse
@@ -523,12 +534,15 @@ def analyseMot(motEntrer):
             lettreEnListe.append(k)
         #Gestion Dessein
         sectionDessein.pack()
-        sectionDessein.create_line(10,70,30,70,arrow=LAST)
-        sectionDessein.create_oval(30,72,30+rayon,72+rayon)
-
+        sectionDessein.create_line(positionx,95,positionx+dist,95,arrow=LAST)
+        sectionDessein.create_oval(positionx+dist,72,positionx+dist+rayon,72+rayon)
+        if(nextEtat in acceptant):
+            sectionDessein.create_oval(30+(5),72+(5),30+(rayon-5),72+(rayon-5))
+        sectionDessein.create_text(positionx+dist+(rayon//2),95,text=f"{nextEtat}",font=("Lato",14,"bold"))
     lettre=lettreEnListe[temporisateur]
     nextEtat=list(tt[(nextEtat,lettre)])[0]
     temporisateur+=1
+    positionx=positionx+dist+rayon
         
         
      
