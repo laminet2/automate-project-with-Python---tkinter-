@@ -25,8 +25,11 @@ y = (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x}+{y-40}")
 temporisateur=0
 motAnalyser=""
-nextEtat=0
+nextEtatEnsemble=set()
 positionx=10
+postionSave=dict()
+pere=dict()
+
 
 #--------- ACCEUILL ---------------------#
 ## MENU
@@ -342,22 +345,23 @@ def afficherTableTransition(root):
         x=20
 
 
-def enregistrerTable(Table,popup,root):
-    global Automate,AFN
-    if(verificationEntrer([Table[i].get() for i in Table])):
+def enregistrerTable(Table,popup,Automate,root):
+    global AFN
+    if(verificationEntrer(list(Table.values()))):
         newTable=dict()
         for element in Table:
-           destination=Table[element].get()
-           if ( destination!='') :
+           destination=Table[element]
+           if (destination!='') :
             newTable[element]=set(map(int, destination.split(',')))
             if(len(newTable[element])>1):
                 AFN=TRUE
         Automate[2]=newTable
         #print(Automate)
-        result=messagebox.showinfo("Success","La table a ete enregistrer avec success")
+        result=messagebox.askquestion("Table enregistrer avec success","Voulez vous poursuivre les modifications ?")
         popup.destroy()
-        
         changementAcceuil()
+        if(result=="yes"):
+            windowsEditTable(root)
     else:
         messagebox.showerror("Erreur d'enregistrement","La table entrer ne peut être enregistrer")
         popup.focus_set()
@@ -394,13 +398,34 @@ def changementAcceuil():
         sectionSortDuMot.pack_forget()
         #afficher recommendation
         champ_analyse.pack()
-
+        
+def completer(popup,root):
+    global Automate
+    Aut=Automate
+    aut=Aut[2]
+    alpha=Aut[1]
+    sommet=Aut[0]
+    liste=list(sommet)
+    puit=max(liste)+1
+    ok=True
+    for i in sommet:
+        for j in alpha:
+            if (i,j) not in aut:
+                aut[(i,j)]={puit}
+                ok=False
+    if ok==False:
+        for j in alpha:
+            aut[(puit,j)]={puit}
+        sommet.add(puit)
+    Automate=[Aut[0],Aut[1],aut,Aut[3],Aut[4]]
+    popup.destroy()
+    windowsEditTable(root)
 
 def windowsEditTable(root):
 
-    global window_width,window_height,Automate
-    (Etat,alphabet,tt,initiaux,acceptant)=Automate
-    print(Automate[2])
+    global window_width,window_height
+    (Etat,alphabet,t,initiaux,acceptant)=Automate
+    #print(Automate[2])
     popup_widht=window_width-246
     popup_height=window_height-221
     x,y=((screen_width - popup_widht) // 2),((screen_height - popup_height) // 2)
@@ -419,23 +444,24 @@ def windowsEditTable(root):
     zoneControle.grid(row=0,column=1,padx=10)
 
     # Button
-    emonderButton=Button(zoneAction,text="Emonder")
+    emonderButton=Button(zoneAction,text="Emonder",command=lambda:emonder(popupWindows,root))
     emonderButton.grid(row=0,column=1,padx=2)
 
-    completerButton=Button(zoneAction,text="Completer")
+    completerButton=Button(zoneAction,text="Completer",command=lambda:completer(popupWindows,root))
     completerButton.grid(row=0,column=2,padx=2)
 
-    determiniserButton=Button(zoneAction,text="Determiniser")
+    determiniserButton=Button(zoneAction,text="Determiniser",command=lambda:déterminise(popupWindows,root))
     determiniserButton.grid(row=0,column=3,padx=2)
     if(not AFN):
         determiniserButton.config(state="disabled")
+    
 
     verificationTable=Button(zoneControle,text="Verifier",command=lambda:verificationEntrerTable([tt[i].get() for i in tt],popupWindows))
     verificationTable.grid(row=0,column=0,padx=2)
     resetImage=ImageTk.PhotoImage(Image.open("icons/reset.png").resize((23,23)))
     rafraichirButton=Button(zoneControle,image=resetImage,command=lambda:rafraichirTable(popupWindows,root))
     rafraichirButton.grid(row=0,column=2,padx=2)
-    saveButton=Button(zoneControle,text="Enregistrer",command=lambda:enregistrerTable(tt,popupWindows,root))
+    saveButton=Button(zoneControle,text="Enregistrer",command=lambda:enregistrerTable({i:tt[i].get() for i in tt},popupWindows,Automate,root))
     saveButton.grid(row=0,column=1,padx=2)
 
     #Zone Dessein
@@ -458,6 +484,7 @@ def windowsEditTable(root):
     etats=list(Etat)
     widthR,heightR,x,y=83,30,20,0
     couleur=["lightcyan1","green"]
+    tt={}
     for ligne in range(len(Etat)+1):
         for column in range(len(alphabet)+1):
             if(ligne==0 and column==0):
@@ -479,8 +506,8 @@ def windowsEditTable(root):
             else:
                 entrer=Entry(canvas2,width=13)
                 entrer.place(x=x,y=y)
-                if((ligne,alphabet[column-1]) in tt):
-                    caracT= ",".join(map(str, list(tt[(ligne,alphabet[column-1])]))) if len(tt[(ligne,alphabet[column-1])])>1 else str(list(tt[(ligne,alphabet[column-1])])[0])
+                if((ligne,alphabet[column-1]) in t):
+                    caracT= ",".join(map(str, list(t[(ligne,alphabet[column-1])]))) if len(t[(ligne,alphabet[column-1])])>1 else str(list(t[(ligne,alphabet[column-1])])[0])
                     entrer.insert(0,caracT)
 
                 tt[(ligne,alphabet[column-1])]=entrer
@@ -488,45 +515,66 @@ def windowsEditTable(root):
             x=x+widthR
         y+=heightR
         x=20
+    
     popupWindows.mainloop()
-
 
 #--------- ANALYSE DU MOT ----------
 #quand on renitialise mettre le temporisateur a 0
 def analyseMot(motEntrer):
-    global Automate,temporisateur,motAnalyser,nextEtat,sectionSortDuMot,sortDuMot,sectionDessein,positionx
+    global Automate,temporisateur,motAnalyser,nextEtatEnsemble,sectionSortDuMot,sortDuMot,sectionDessein,positionx,postionSave,pere
     (Etat,alphabet,tt,initiaux,acceptant)=Automate
     lettreEnListe=[]
     rayon=50
-    y=72
+    y=50
     dist=50
+    # if(AFN):
+    #     messagebox.showinfo("En Attente","La lecture d'un mot par un AFD n'est pas encore prise en compte")
+    #     return False
+    
     if(motEntrer==motAnalyser and motEntrer!=""):
         lettreEnListe=[k for k in motEntrer]
         #Dessein
         if(temporisateur>=len(lettreEnListe)):
             #donner le sort final du mot
             sectionSortDuMot.pack()
-            if(nextEtat in acceptant):
-                sortDuMot.config(bg="green")
-                sortDuMot["text"]="MOT ACCEPTER"
-            else:
-                sortDuMot.config(bg="red")
-                sortDuMot["text"]="MOT REFUSER"
+            #print(nextEtat)
+            for nextEtat in nextEtatEnsemble:
+                if(nextEtat in acceptant):
+                    
+                    sortDuMot.config(bg="green")
+                    sortDuMot["text"]="MOT ACCEPTER"
+                    sortDuMot.pack()
+                    return True
+            
+            sortDuMot.config(bg="red")
+            sortDuMot["text"]="MOT REFUSER"
             sortDuMot.pack()
-                
-            return True
+            return False
+            
         
-        sectionDessein.create_line(positionx,95,positionx+dist,95,arrow=LAST)
-        sectionDessein.create_oval(positionx+dist,y,positionx+dist+rayon,y+rayon)
-        if(nextEtat in acceptant):
-            sectionDessein.create_oval(positionx+dist+(5),y+(5),positionx+dist+(rayon-5),y+(rayon-5))
-        sectionDessein.create_text(dist+positionx+(rayon//2),95,text=f"{nextEtat}",font=("Lato",14,"bold"))
+        
+        
+        for nextEtat in nextEtatEnsemble:
+            y=50
+            while((positionx+dist,y,positionx+dist+rayon,y+rayon) in postionSave.values()):
+                y+=52
+            for k in pere[nextEtat]:
+                sectionDessein.create_line(positionx,postionSave[k][1]+23,positionx+dist,y+23,arrow=LAST)
+            sectionDessein.create_oval(positionx+dist,y,positionx+dist+rayon,y+rayon)
+            postionSave[nextEtat]=(positionx+dist,y,positionx+dist+rayon,y+rayon)
+            pere[nextEtat]=set()
+            #print(nextEtat)
+            if(nextEtat in acceptant):
+                sectionDessein.create_oval(positionx+dist+(5),y+(5),positionx+dist+(rayon-5),y+(rayon-5))
+            sectionDessein.create_text(dist+positionx+(rayon//2),y+23,text=f"{nextEtat}",font=("Lato",14,"bold"))
 
     elif(motEntrer!=""):
         #premiere analyse
-        temporisateur=1
+        postionSave=dict()
+        pere=dict()
+        temporisateur=0
         motAnalyser=motEntrer
-        nextEtat=list(initiaux)[0]
+        nextEtatEnsemble=list(initiaux)  #For next ETAT
         for k in motEntrer:
             if(k not in alphabet):
                 messagebox.showerror("Invalide","Le mot entrer contient des elements n'ont mentionner dans l'alphabet ")
@@ -534,20 +582,154 @@ def analyseMot(motEntrer):
             lettreEnListe.append(k)
         #Gestion Dessein
         sectionDessein.pack()
-        sectionDessein.create_line(positionx,95,positionx+dist,95,arrow=LAST)
-        sectionDessein.create_oval(positionx+dist,72,positionx+dist+rayon,72+rayon)
-        if(nextEtat in acceptant):
-            sectionDessein.create_oval(30+(5),72+(5),30+(rayon-5),72+(rayon-5))
-        sectionDessein.create_text(positionx+dist+(rayon//2),95,text=f"{nextEtat}",font=("Lato",14,"bold"))
+        
+        for nextEtat in nextEtatEnsemble:
+            sectionDessein.create_line(positionx,y+23,positionx+dist,y+23,arrow=LAST)
+            sectionDessein.create_oval(positionx+dist,y,positionx+dist+rayon,y+rayon)
+            postionSave[nextEtat]=(positionx+dist,y,positionx+dist+rayon,y+rayon)
+            if(nextEtat in acceptant):
+                sectionDessein.create_oval(30+(5),y+(5),30+(rayon-5),y+(rayon-5))
+            sectionDessein.create_text(positionx+dist+(rayon//2),y+23,text=f"{nextEtat}",font=("Lato",14,"bold"))
+            y+=52
+
     lettre=lettreEnListe[temporisateur]
-    nextEtat=list(tt[(nextEtat,lettre)])[0]
+    nextEtatEnsembleTempo=set()
+    for nextEtat in nextEtatEnsemble:
+        if((nextEtat,lettre) in tt):
+            nextEtatEnsembleTempo = nextEtatEnsembleTempo | tt[(nextEtat,lettre)]
+            for i in tt[(nextEtat,lettre)]:
+                if(i not in pere):
+                    pere[i]=set()
+                pere[i].add(nextEtat)
+        else:
+            messagebox.showwarning("Incomplet",'Automate INCOMPLET')
+    nextEtatEnsemble=nextEtatEnsembleTempo
     temporisateur+=1
     positionx=positionx+dist+rayon
         
-        
+
      
 #----------------------------------
 
+######------------Fonction
+def getKeyFromValues(my_dict,value):
+    return list(filter(lambda x: my_dict[x] == value, my_dict))[0]
+
+def déterminise(popup,root):
+    global Automate,AFD
+    (etats,alpha,Trans,init,accept)=Automate
+    newEtat={1:init}
+    TT=dict()
+    newAccept=set()
+    chiffreRomain=1
+    while chiffreRomain<=len(newEtat.keys()):
+        for lettre in alpha:
+            newEtatt=set()
+            for i in newEtat[chiffreRomain]:
+                if(i,lettre) in Trans:
+                    for k in Trans[(i,lettre)] :
+                        newEtatt.add(k)
+            if(newEtatt!=set()):
+                if((newEtatt not in newEtat.values())):
+                    newEtat[max(newEtat.keys())+1]=newEtatt
+                TT[(chiffreRomain,lettre)]=getKeyFromValues(newEtat,newEtatt)
+        
+        #Traitement etant acceptant/ICI je cherche a savoir si le chiffre romain est un etat acceptant
+        if(accept.intersection(newEtat[chiffreRomain])!=set()):
+            newAccept.add(chiffreRomain)
+        chiffreRomain+=1
+    Automate=[set(newEtat.keys()),alpha,{i:{TT[i]} for i in TT},{1},newAccept]
+    #print(Automate)
+    AFD=False
+    popup.destroy()
+    windowsEditTable(root)
+
+
+#####-----------------------
+
+def emonder(popup,root):
+    global Automate
+    (etats,alpha,T,initiaux,Ac)=Automate
+    #print("etat initaux debut",initiaux)
+    A=accessible(Automate)
+    #print("etat initaux fin",initiaux)
+    B=coAccessible(Automate)
+
+    C=A.intersection(B) # Les sommets accessibles et co-accessibles
+    #print(C)
+    L=list(C)
+    #Les nouveaux états
+    etats2={i+1 for i in range(len(C))}
+    #print(etats2)
+    # La bijection entre états
+    bij={L[i]:i+1 for i in range(len(C))}
+    #print(bij)    
+    #Construction du nouvel automate
+    Ac2={bij[i] for i in Ac}
+    #print(Ac2)
+    
+    T2={ }
+    for (i,c) in T:
+        k=T[i,c]
+        for j in k :
+            if i in C and j in C:
+                if((bij[i],c) not in T2):
+                    T2[(bij[i],c)]=set()
+                T2[(bij[i],c)].add(bij[j])
+    
+    init=set()
+    cpt=0
+    #print("Etat initiaux",initiaux)
+    for i in initiaux:
+        cpt=cpt+1
+        if(i in bij):
+            print("bij[i]",bij[i])
+            init.add(bij[i])
+    #print("le compteur",cpt)
+    Automate=[etats2,alpha,T2,initiaux,Ac2]
+    popup.destroy()
+    windowsEditTable(root)
+
+
+def coAccessible(aut):
+    (etats,alpha,T,init,Ac)=aut
+    #On construit le graphe inverse
+    G={i:[] for i in etats}
+    for i in etats:
+        for c in alpha:
+            if (i,c) in T:
+                k=T[(i,c)]
+                for j in k:
+                    G[j].append(i)
+
+                    
+    coAccess={i for i in Ac}
+    for e in Ac:
+        L=[e]
+        while L:
+            i=L.pop(0)
+            for j in G[i]:
+                if not j in coAccess:
+                    coAccess.add(j)
+                    L.append(j)
+    return coAccess
+            
+def accessible(aut):
+    (etats,alpha,T,init,Ac)=aut
+    Access=init.copy() 
+    L=list(init)
+    while L:
+        i=L.pop(0)
+        for c in alpha:
+            if (i,c) in T:
+                k=T[(i,c)]
+                for j in k:
+                    if not j in Access:
+                        Access.add(j)
+                        L.append(j)
+    return Access  
+
+#####---------------
     # for i in range(1,20):
     #     label= Label(canvas,text=f"label{i}",bg="yellow")
     #     label.pack()
