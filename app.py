@@ -29,6 +29,7 @@ nextEtatEnsemble=set()
 positionx=10
 postionSave=dict()
 pere=dict()
+epsilon=False
 
 
 #--------- ACCEUILL ---------------------#
@@ -114,6 +115,16 @@ def renitianiliser_saisie():
     sortDuMot.pack_forget()
     sectionDessein.delete("all")
     sectionDessein.pack_forget()
+
+def activer_desactiver_epsilon(popup,root):
+    global epsilon
+    if epsilon==True:
+        epsilon=False
+    else:
+        
+        epsilon = True
+    popup.destroy()
+    windowsEditTable(root)
 
 #champ saisir mot
 champ_analyse=Canvas(root)
@@ -311,13 +322,16 @@ def afficherTableTransition(root):
     popupWindows.title("Afficher Table")
     popupWindows.geometry(f"{popup_widht}x{popup_height}+{window_width+392}+{y-40}")
 
+    alphabett=alphabet[:]
+    if(epsilon):
+        alphabett.append("€")
     canvas2=Canvas(popupWindows)
     canvas2.pack(padx=10)
     etats=list(Etat)
     widthR,heightR,x,y=83,30,20,0
     couleur=["lightcyan1","green","lightyellow1"]
     for ligne in range(len(Etat)+1):
-        for column in range(len(alphabet)+1):
+        for column in range(len(alphabett)+1):
             if(ligne==0 and column==0):
                 rectangle=canvas2.create_rectangle(x,y,x+widthR,y+heightR,fill=couleur[0])
                 canvas2.create_text(x+(widthR/2),y+(heightR/2),text="Q\∑",font=("Lato",14,"bold"))
@@ -325,7 +339,7 @@ def afficherTableTransition(root):
             elif(ligne==0):
                 #Ligne des entete etat
                 rectangle=canvas2.create_rectangle(x,y,x+widthR,y+heightR,fill=couleur[0])
-                canvas2.create_text(x+(widthR/2),y+(heightR/2),text=f"{alphabet[column-1]}",font=("Lato",14,"bold"))
+                canvas2.create_text(x+(widthR/2),y+(heightR/2),text=f"{alphabett[column-1]}",font=("Lato",14,"bold"))
                 
             elif(column==0):
                 #etats
@@ -336,8 +350,8 @@ def afficherTableTransition(root):
                 canvas2.create_text(x+(widthR/2),y+(heightR/2),text=f"{etat}",font=("Lato",14,"bold"))
             else:
                 rectangle=canvas2.create_rectangle(x,y,x+widthR,y+heightR,fill=couleur[2])
-                if((ligne,alphabet[column-1]) in tt):
-                    caracT= ",".join(map(str, list(tt[(ligne,alphabet[column-1])]))) if len(tt[(ligne,alphabet[column-1])])>1 else str(list(tt[(ligne,alphabet[column-1])])[0])
+                if((ligne,alphabett[column-1]) in tt):
+                    caracT= ",".join(map(str, list(tt[(ligne,alphabett[column-1])]))) if len(tt[(ligne,alphabett[column-1])])>1 else str(list(tt[(ligne,alphabett[column-1])])[0])
                     canvas2.create_text(x+(widthR/2),y+(heightR/2),text=f"{caracT}",font=("Lato",14,"bold"))
                 
             x=x+widthR
@@ -423,7 +437,7 @@ def completer(popup,root):
 
 def windowsEditTable(root):
 
-    global window_width,window_height
+    global window_width,window_height,epsilon
     (Etat,alphabet,t,initiaux,acceptant)=Automate
     #print(Automate[2])
     popup_widht=window_width-246
@@ -435,13 +449,13 @@ def windowsEditTable(root):
     #popupWindows.config(bg='red')
     
     ZoneButton=Canvas(popupWindows,height=50)
-    ZoneButton.pack(padx=30,pady=10)
+    ZoneButton.pack(padx=5,pady=10)
 
     zoneAction=LabelFrame(ZoneButton,text="Button d'Operations")
-    zoneAction.grid(row=0,column=0,padx=10)
+    zoneAction.grid(row=0,column=0,padx=7)
     
     zoneControle=LabelFrame(ZoneButton,text="Button de Controle")
-    zoneControle.grid(row=0,column=1,padx=10)
+    zoneControle.grid(row=0,column=1,padx=7)
 
     # Button
     emonderButton=Button(zoneAction,text="Emonder",command=lambda:emonder(popupWindows,root))
@@ -452,8 +466,15 @@ def windowsEditTable(root):
 
     determiniserButton=Button(zoneAction,text="Determiniser",command=lambda:déterminise(popupWindows,root))
     determiniserButton.grid(row=0,column=3,padx=2)
-    if(not AFN):
-        determiniserButton.config(state="disabled")
+
+    alphabett=alphabet[:]
+    if(epsilon):
+        alphabett.append("€")
+        epsilonTexte="Desactiver AFN€"
+    else:
+        epsilonTexte="Activer AFN€"
+    epsilonButton=Button(zoneAction,text=epsilonTexte,command=lambda:activer_desactiver_epsilon(popupWindows,root))
+    epsilonButton.grid(row=0,column=4,padx=2)
     
 
     verificationTable=Button(zoneControle,text="Verifier",command=lambda:verificationEntrerTable([tt[i].get() for i in tt],popupWindows))
@@ -485,8 +506,10 @@ def windowsEditTable(root):
     widthR,heightR,x,y=83,30,20,0
     couleur=["lightcyan1","green"]
     tt={}
+    
     for ligne in range(len(Etat)+1):
-        for column in range(len(alphabet)+1):
+        for column in range(len(alphabett)+1):
+            
             if(ligne==0 and column==0):
                 rectangle=canvas2.create_rectangle(x,y,x+widthR,y+heightR,fill=couleur[0])
                 canvas2.create_text(x+(widthR/2),y+(heightR/2),text="Q\∑",font=("Lato",14,"bold"))
@@ -494,7 +517,7 @@ def windowsEditTable(root):
             elif(ligne==0):
                 #Ligne des entete etat
                 rectangle=canvas2.create_rectangle(x,y,x+widthR,y+heightR,fill=couleur[0])
-                canvas2.create_text(x+(widthR/2),y+(heightR/2),text=f"{alphabet[column-1]}",font=("Lato",14,"bold"))
+                canvas2.create_text(x+(widthR/2),y+(heightR/2),text=f"{alphabett[column-1]}",font=("Lato",14,"bold"))
                 
             elif(column==0):
                 #etats
@@ -506,11 +529,11 @@ def windowsEditTable(root):
             else:
                 entrer=Entry(canvas2,width=13)
                 entrer.place(x=x,y=y)
-                if((ligne,alphabet[column-1]) in t):
-                    caracT= ",".join(map(str, list(t[(ligne,alphabet[column-1])]))) if len(t[(ligne,alphabet[column-1])])>1 else str(list(t[(ligne,alphabet[column-1])])[0])
+                if((ligne,alphabett[column-1]) in t):
+                    caracT= ",".join(map(str, list(t[(ligne,alphabett[column-1])]))) if len(t[(ligne,alphabett[column-1])])>1 else str(list(t[(ligne,alphabett[column-1])])[0])
                     entrer.insert(0,caracT)
 
-                tt[(ligne,alphabet[column-1])]=entrer
+                tt[(ligne,alphabett[column-1])]=entrer
 
             x=x+widthR
         y+=heightR
@@ -614,10 +637,78 @@ def analyseMot(motEntrer):
 ######------------Fonction
 def getKeyFromValues(my_dict,value):
     return list(filter(lambda x: my_dict[x] == value, my_dict))[0]
+    
+
+def cloture(aut,i):
+    (etats,al,T,init,Ac)=aut
+
+    Cl={i} # La clôture de l'état i
+    L=[i]
+    while L:
+        j=L.pop(0)
+        if (j,'€') in T:
+            for k in T[(j,'€')]:
+                if not k in Cl:
+                    Cl.add(k)
+                    L.append(k)
+    return (Cl)
+
+
+
+
+def determiniserAFDepsilon():
+    global Automate
+    (etats,alpha,T,init,accept)=Automate
+    
+    Cl={i:cloture(Automate,i) for i in etats}
+    Ac=set(accept)
+    for e in etats:
+        if Cl[e].intersection(accept)!=set() and not e in Ac:
+            Ac.add(e)
+    etatsD={1}
+    k=1
+    TD = {}
+    initD={1}
+    acceptD=set()
+    if init.intersection(Ac)!=set():
+                acceptD.add(1)
+    L=[init] 
+    LM=[init]
+    while L:
+        et=L.pop(0)
+        for c in alpha:
+            et2=set()
+            for i in et:
+                for e in Cl[i]:
+                    if (e,c) in T:
+                        et2=et2.union(T[(e,c)])
+
+            if et2!=set():
+                if  (et2 not in LM):
+                    k+=1
+                    etatsD.add(k)
+                    LM.append(et2) 
+                    L.append(et2)
+                i=LM.index(et)+1
+                j=LM.index(et2)+1
+                TD[(i,c)]=j
+                if et2.intersection(Ac)!=set():
+                        acceptD.add(j)
+    
+    Automate=(etatsD,alpha,{i:{TD[i]} for i in TD},initD,acceptD)
+    return True
+        
 
 def déterminise(popup,root):
-    global Automate,AFD
+    global Automate,AFD,epsilon
     (etats,alpha,Trans,init,accept)=Automate
+    if(not AFN and not epsilon):
+        messagebox.showwarning("AFD","Votre automate n'est pas un AFN")
+        return False
+    if(epsilon):
+        determiniserAFDepsilon()
+        activer_desactiver_epsilon(popup,root)
+        return TRUE
     newEtat={1:init}
     TT=dict()
     newAccept=set()
@@ -728,6 +819,8 @@ def accessible(aut):
                         Access.add(j)
                         L.append(j)
     return Access  
+
+
 
 #####---------------
     # for i in range(1,20):
