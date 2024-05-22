@@ -542,11 +542,25 @@ def windowsEditTable(root):
     popupWindows.mainloop()
 
 #--------- ANALYSE DU MOT ----------
+def cloture(aut,i):
+    (etats,al,T,init,Ac)=aut
+
+    Cl={i} # La clôture de l'état i
+    L=[i]
+    while L:
+        j=L.pop(0)
+        if (j,'€') in T:
+            for k in T[(j,'€')]:
+                if not k in Cl:
+                    Cl.add(k)
+                    L.append(k)
+    return (Cl)
 #quand on renitialise mettre le temporisateur a 0
 def analyseMot(motEntrer):
     global Automate,temporisateur,motAnalyser,nextEtatEnsemble,sectionSortDuMot,sortDuMot,sectionDessein,positionx,postionSave,pere
     (Etat,alphabet,tt,initiaux,acceptant)=Automate
     lettreEnListe=[]
+    Cl={i:cloture(Automate,i) for i in Etat}
     rayon=50
     y=50
     dist=50
@@ -557,26 +571,8 @@ def analyseMot(motEntrer):
     if(motEntrer==motAnalyser and motEntrer!=""):
         lettreEnListe=[k for k in motEntrer]
         #Dessein
-        if(temporisateur>=len(lettreEnListe)):
-            #donner le sort final du mot
-            sectionSortDuMot.pack()
-            #print(nextEtat)
-            for nextEtat in nextEtatEnsemble:
-                if(nextEtat in acceptant):
-                    
-                    sortDuMot.config(bg="green")
-                    sortDuMot["text"]="MOT ACCEPTER"
-                    sortDuMot.pack()
-                    return True
-            
-            sortDuMot.config(bg="red")
-            sortDuMot["text"]="MOT REFUSER"
-            sortDuMot.pack()
-            return False
-            
-        
-        
-        
+        if(temporisateur>len(lettreEnListe)):
+            nextEtatEnsemble=set()
         for nextEtat in nextEtatEnsemble:
             y=50
             while((positionx+dist,y,positionx+dist+rayon,y+rayon) in postionSave.values()):
@@ -590,6 +586,24 @@ def analyseMot(motEntrer):
             if(nextEtat in acceptant):
                 sectionDessein.create_oval(positionx+dist+(5),y+(5),positionx+dist+(rayon-5),y+(rayon-5))
             sectionDessein.create_text(dist+positionx+(rayon//2),y+23,text=f"{nextEtat}",font=("Lato",14,"bold"))
+
+        if(temporisateur==len(lettreEnListe)):
+            #donner le sort final du mot
+            sectionSortDuMot.pack()
+            #print(nextEtat)
+            for nextEtat in nextEtatEnsemble:
+                if(nextEtat in acceptant):
+                    
+                    sortDuMot.config(bg="green")
+                    sortDuMot["text"]="MOT ACCEPTER"
+                    sortDuMot.pack()
+                    temporisateur+=1
+                    return True
+            temporisateur+=1
+            sortDuMot.config(bg="red")
+            sortDuMot["text"]="MOT REFUSER"
+            sortDuMot.pack()
+            return False
 
     elif(motEntrer!=""):
         #premiere analyse
@@ -624,14 +638,23 @@ def analyseMot(motEntrer):
                 if(i not in pere):
                     pere[i]=set()
                 pere[i].add(nextEtat)
-        else:
-            messagebox.showwarning("Incomplet",'Automate INCOMPLET')
+        # else:
+        #     messagebox.showwarning("Incomplet",'Automate INCOMPLET')
+
+        if(epsilon==True and Cl[nextEtat]!=set()):
+            for j in Cl[nextEtat]:
+                    if(j!=nextEtat and (j,lettre) in tt):
+                        for k in tt[(j,lettre)]:
+                            nextEtatEnsembleTempo.add(k)
+                            if(k not in pere):
+                                pere[k]=set()
+                            pere[k].add(nextEtat)
+        
     nextEtatEnsemble=nextEtatEnsembleTempo
     temporisateur+=1
     positionx=positionx+dist+rayon
         
 
-     
 #----------------------------------
 
 ######------------Fonction
@@ -652,8 +675,6 @@ def cloture(aut,i):
                     Cl.add(k)
                     L.append(k)
     return (Cl)
-
-
 
 
 def determiniserAFDepsilon():
@@ -853,7 +874,6 @@ def accessible(aut):
     # frameRoot.update_idletasks()
     # canvas.config(scrollregion=canvas.bbox("all"))
 
-    
 
 #-----------------------------------#
 root.mainloop()
